@@ -1,0 +1,51 @@
+#! /bin/sh
+# Copyright (c) 2014 David B. Lamkins
+# Licensed under the MIT License
+# See the LICENSE file included with this software.
+
+# Run this script to compare your GNU APL version to the version that
+# was used to test this version of the APL Package Manager.
+#
+# There are three possible outcomes:
+#
+#  1. Your APL is older; the package manager might not work because it
+#     depends on features or fixes not present in the newer APL.
+#
+#  2. Your APL is the same; the package manager will definitely work.
+#
+#  3. Your APL is newer; the package manager should work, but
+#     regressions or fixes in the new APL may break the package
+#     manager.
+
+HERE=`( cd $(dirname $0) && pwd )`
+
+. ${HERE}/version-info
+APL_VERSION=`apl -v | awk '/Version/ { sub(/\./, " ", $4); print $4 " " $6 }'`
+
+. ${HERE}/../script/tp.sh
+
+clean () {
+    echo $1 | tr -cd '0-9'
+}
+
+check () {
+    av=$(( ( $1 * 100000000 ) + ( $2 * 100000 ) + `clean $3` ))
+    cv=$(( ( $4 * 100000000 ) + ( $5 * 100000 ) + `clean $6` ))
+    if [  $av -eq $cv ]; then
+        printf "`ic The same. Definitely OK.`"
+    elif [ $av -gt $cv ]; then
+        printf "`wc Newer. Probably OK.`"
+    else
+        printf "`ec Older. Maybe not OK.`"
+    fi
+    tp end
+}
+
+cat <<EOF
+Compare your GNU APL version to the GNU APL version against which this
+release of the `tp ul`APL Package Manager`tp pl` was tested.
+
+  Details
+    Yours: ${APL_VERSION} - `check ${APL_VERSION} ${CHECK_VERSION}`
+    Check: ${CHECK_VERSION} - This is the test version.
+EOF

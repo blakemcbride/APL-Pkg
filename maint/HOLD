@@ -1,0 +1,15 @@
+This file contains items removed from or not suitable for the NOTES
+file due to implementation complexity or limited applicability.
+
+- Loader should be selective about ]-commands; allow only user-command
+  definition (e.g. ]usercmd in GNU APL).
+
+- Loader should disallow system commands in ⍎ argument, e.g. ⍎')off'.
+
+- Finish APLwrap integration (complete with incomplete context).
+
+- Deployment scenario: stripped-down package manager (loader and
+  dependencies only?) plus additional command-line option
+  `--pkg-repository` allows distribution of deployable system as an
+  archive containing packages and manifest. System is then loaded as
+  `$ apl -- --pkg-repository <path> --pkg-manifest <manifest>`.

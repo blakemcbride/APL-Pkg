@@ -1,0 +1,8 @@
+#! /bin/bash
+
+HERE=$( cd `dirname $0` && pwd )
+TOP=$( git rev-parse --show-toplevel )
+
+for f in $HERE/git-hooks/*; do
+    ln -vnsf ../../${f#$TOP/} $TOP/.git/hooks
+done

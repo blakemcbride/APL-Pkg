@@ -1,0 +1,15 @@
+# This is not an APL file. This is metadata for an APL package.
+
+package_name: demo-p7
+package_prefix: d7
+package_version: 
+depends_on: demo-p8
+depends_on: demo-p5
+date: 
+keyword: 
+author: 
+email: 
+organization: 
+license: 
+description: 
+home_repository: 

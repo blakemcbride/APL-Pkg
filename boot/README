@@ -1,0 +1,46 @@
+Files in the boot directory are specific to a particular APL/host
+combination.
+
+A platform-specific installation script shall provide a
+means for the APL to initiate loading by naming the bootstrap file,
+preferably aliased (e.g. via a symbolic link) to the name 'pkg'.
+
+Each bootstrap file must establish a minimal environment that will
+load the remainder of the package manager.
+
+In particular, the bootstrap file must:
+
+1. Provide a function to read a host file line-by-line, returning a
+   vector of integers representing the byte values read from the file.
+
+2. Provide a function pkg⍙concatenate_paths to concatenate path
+   components provided as APL lists of component names or host path
+   fragments, creating a host pathname which obeys the host rules for
+   component separators.
+
+3. Provide a function to convert a sequence of integer values (as read
+   by the function in 1.) to the APL's internal character set.
+
+4. Provide the functions: pkg⍙user_home, pkg⍙import_apl,
+   pkg⍙read_key_value_file, and pkg⍙parse_metadata. Until such time as
+   there's a spec for these, the versions in gnu-apl-linux.apl shall
+   serve as a reference implementation.
+
+   Also provide a function location database pkg⍙⍙fn_location_db. As
+   above, the code in gnu-apl-linux.apl shall serve as a reference
+   implementation.
+
+5. Provide a function pkg⍙BOOT_LOAD which accepts a list of path
+   components relative to the package manager's directory (considering
+   both the standard location in ~/workspaces and the configured
+   location specified in ~/.apl-pkg), loading the referenced file
+   using the pkg⍙import_apl function. Again, the implementation in
+   gnu-apl-linux.apl shall serve as a reference until such time as a
+   spec exists.
+
+6. Remove all functions prefixed by pkg⍙BOOT_ after completion of the
+   bootstrap.
+
+7. Define a platform-specific UI helper for the pkg function, if the
+   APL provides such a facility. The helper must access the package
+   manager via the top-level pkg function.

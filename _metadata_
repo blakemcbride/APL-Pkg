@@ -1,0 +1,43 @@
+# Copyright (c) 2014 David B. Lamkins
+# Licensed under the MIT License
+# See the LICENSE file included with this software.
+
+# Metadata for APL Package Manager
+
+author: David B. Lamkins
+email: david@lamkins.net
+organization: Just some guy at home
+license: The MIT License (MIT); See the LICENSE file.
+description: Package Manager for APL, based upon a concept by
+David Lamkins. This is the Percy release.
+keyword: package manager
+keyword: dependencies
+keyword: multiplatform
+keyword: multilanguage
+keywork: analysis
+date: 2015-10-06
+depends_on:
+package_name: apl-packager
+package_version: 0 4 174 1034
+package_prefix: pkg
+document_file: README.md
+document_name: APL Package Manager
+document_file-1: doc TUTORIAL.md
+document_name-1: Tutorial for APL Package Manager
+document_file-2: doc API.md
+document_name-2: API for APL Package Manager
+document_file-3: doc CMDLINE.md
+document_name-3: Command-line Options
+document_file-4: doc ROADMAP.md
+document_name-4: Release Roadmap for APL Package Manager
+document_file-5: demo README.md
+document_name-5: APL Package Manager demonstration packages
+document_file-6: doc EDITOR.md
+document_name-6: Editor support
+document_file-7: doc PREFERENCES.md
+document_name-7: APL Package Manager preference file
+document_file-8: doc CHANGES.md
+document_name-8: APL Package Manager changes by release
+document_file-9: LICENSE
+document_name-9: The MIT License (MIT)
+home_repository: https://github.com/TieDyedDevil/apl-pkg

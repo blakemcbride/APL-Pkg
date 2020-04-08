@@ -1,0 +1,30 @@
+To be completed:
+
+	- Rework directory-path mapping to handle versioned packages.
+
+	- Evaluate constraints.
+        - Select constrained versions.
+
+--- current
+
+pkg⍙get_load_paths calls pkg⍙compute_dependencies, which computes
+all dependencies for a package.
+
+pkg⍙load calls pkg⍙get_load_paths and pkg⍙load_one_package.
+
+pkg⍙get_load_paths returns all required packages regardless of version.
+
+pkg⍙load checks versions present for consistent definition and
+non-duplication.
+
+--- pending
+
+pkg⍙load will compute the set of packages which satisfy version
+constraints.
+
+	compute dependency graph
+	use backtracking search to find set of satisfying versions
+	load as usual
+
+How does pkg⍙load receive per-package version constraints? (via
+pkg⍙get_load_paths?)

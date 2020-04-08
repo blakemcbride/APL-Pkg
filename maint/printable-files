@@ -1,0 +1,20 @@
+#! /bin/bash
+# Copyright (c) 2014 David B. Lamkins
+# Licensed under the MIT License
+# See the LICENSE file included with this software.
+
+# List *most* of the source files. You can use this together with a
+# print utility to print the source in a nicely organized batch. Not
+# included: demo package code and miscellaneous files that don't fit
+# the patterns we're matching.
+
+HERE=`( cd $(dirname $0) && pwd )`
+TOP=${HERE}/..
+
+. ${TOP}/script/files.sh
+
+files ${TOP} | doc_files
+files ${TOP} | apl_files
+files ${TOP} | package_files
+files ${TOP} | script_files
+

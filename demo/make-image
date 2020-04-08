@@ -1,0 +1,11 @@
+# Copyright (c) 2014 David B. Lamkins
+# Licensed under the MIT License
+# See the LICENSE file included with this software.
+
+# This is a maintainer Makefile.
+# Users: See README.md for installation instructions.
+
+all: depends.png
+
+%.png: %.dot
+	dot -Tpng $< >$@

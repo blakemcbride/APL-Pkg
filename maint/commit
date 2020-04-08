@@ -1,0 +1,234 @@
+#! /bin/sh
+# Copyright (c) 2014 David B. Lamkins
+# Licensed under the MIT License
+# See the LICENSE file included with this software.
+
+usage () {
+    cat <<EOF
+usage: `basename $0` component [message ...]
+
+Update and commit the ${METADATA_FILE} file after modifying its
+\`package_version\` field. The git index must be clean.
+
+The first argument specifies which package version component to
+increment.
+
+  -1 -maj   Update the first  component of the version number
+  -2 -min   Update the second component of the version number
+  -3 -fix   Update the third  component of the version number
+  -4 -git   Update the fourth component of the version number
+
+Version components to the right of the incremented position are reset
+to zero.
+
+The fourth version component is always set to the git commit count
+that will apply to the committed ${METADATA_FILE} file.
+
+The commit count is never reset to zero by incrementing another
+version component
+
+A default message is created for the commit. You may provide
+additional text to be appended to the default message.
+
+EOF
+    exit 1
+}
+
+# Respond to help request.
+
+if [ "$1" = "?" ] || [ "$1" = "--help" ]; then usage; fi
+
+HERE=`( cd $(dirname $0) && pwd )`
+
+. ${HERE}/../script/ask.sh
+
+METADATA_FILE=_metadata_
+
+confirm_or_exit () {
+    ask "$* [y/N]? "
+    for check in y Y yes YES Yes; do
+        if [ "${REPLY}" = ${check} ]; then return; fi
+    done
+    if [ -n "${VERSION_INFO_SAVE}" ]; then
+        cp ${VERSION_INFO_SAVE} ${VERSION_INFO_FILE}
+    fi
+    exit 1
+}
+
+# Preflight: Check for presence of metadata file.
+
+if [ ! -f ${METADATA_FILE} ]; then
+    echo No ${METADATA_FILE} file in this directory.
+    exit 1
+fi
+
+# Parse out the existing version numbers; these all default to zero if
+# missing.
+
+VERSION_DATA=/tmp/$$-version-data
+cat ${METADATA_FILE} | \
+    awk '/^package_version:/ { print $2 " " $3 " " $4 " 0 0 0" }' \
+        > $VERSION_DATA
+read V1 V2 V3 JUNK < $VERSION_DATA
+rm -f $VERSION_DATA
+
+# Check the first argument for an option to increment one of the first
+# three version numbers. Version numbers to the right of the
+# incremented position are reset to zero.
+
+case $1 in
+    -1 | -maj) V1=$(( V1 + 1 )); V2=0; V3=0; shift ;;
+    -2 | -min) V2=$(( V2 + 1 )); V3=0; shift ;;
+    -3 | -fix) V3=$(( V3 + 1 )); shift ;;
+    -4 | -git) shift ;;
+    *) usage ;;
+esac
+
+# Preflight: Check for presence of git hive.
+
+GIT_HIVE=.git
+
+if [ ! -d ${GIT_HIVE} ]; then
+    echo No ${GIT_HIVE} directory.
+    exit 1
+fi
+
+# Preflight: Warn and bail if any files are not staged.
+
+UNINDEX_COUNT=`git status --porcelain 2>/dev/null | grep -e '^??' | wc -l`
+
+if [ ${UNINDEX_COUNT} -ne 0 ]; then
+    echo Unindexed files: ${UNINDEX_COUNT}
+    git status --porcelain 2>/dev/null | grep -e '^??'
+    confirm_or_exit Continue without these files
+fi
+
+# Preflight: Warn and bail if uncommited changes are already staged.
+
+PENDING_COUNT=`git status --porcelain 2>/dev/null | grep -v '^??' | wc -l`
+
+if [ ${PENDING_COUNT} -ne 0 ]; then
+    echo Uncommitted changes: ${PENDING_COUNT}
+    git status --porcelain 2>/dev/null | grep -v '^??'
+    confirm_or_exit Commit these along with the updated ${METADATA_FILE} file
+fi
+
+# Preflight: Check text file formats
+
+echo Checking file formats
+if ! ${HERE}/files-check; then
+    confirm_or_exit Continue anyway
+fi
+
+# ================ PHASE 1: UPDATE version-info FILE ================
+
+VERSION_INFO_FILE=${HERE}/version-info
+
+VERSION_INFO_SAVE=/tmp/old_`basename ${VERSION_INFO_FILE}`.$$
+VERSION_INFO_SCRATCH=\#new_`basename ${VERSION_INFO_FILE}`
+
+APL_VERSION=`apl -v | awk '/Version/ { sub(/\./, " ", $4); print $4 " " $6 }'`
+
+split () {
+    AV1=$1
+    AV2=$2
+    AV3=$3
+}
+
+split ${APL_VERSION}
+
+cp ${VERSION_INFO_FILE} ${VERSION_INFO_SAVE}
+
+cat ${VERSION_INFO_FILE} | awk "{ \
+ if (match(\$0, /^CHECK_VERSION=/)) \
+ print(\"CHECK_VERSION=\\\"\" ${AV1} \" \" ${AV2} \" \" ${AV3} \"\\\"\"); \
+ else print }" > ${VERSION_INFO_SCRATCH}
+
+# Be careful in case something has gone wrong. This expression will
+# produce 2 if the version has been properly rewritten, 0 if the
+# version remains the same, and some other value if a detectable
+# failure has occurred.
+
+DIFF_TMP=.diff_tmp
+
+CHECK_COUNT=`diff -U 0 ${VERSION_INFO_FILE} ${VERSION_INFO_SCRATCH} \
+ | grep '^.CHECK_VERSION' | tee ${DIFF_TMP} | wc -l`
+
+if [ $CHECK_COUNT -eq 2 ]; then
+    # We are updating the version in the metadata file and
+    # committing that file with anything else in the git index.
+    cat ${DIFF_TMP}
+    mv ${VERSION_INFO_SCRATCH} ${VERSION_INFO_FILE}
+    echo New APL version ${APL_VERSION}
+elif [ $CHECK_COUNT -eq 0 ]; then
+    # The commit count is right where the version file says
+    # it should be; there's nothing to commit.
+    rm ${VERSION_INFO_SCRATCH}
+    echo No change in APL version
+else
+    # We shouldn't see this unless something's borked.
+    echo Something went wrong.
+    echo See ${VERSION_INFO_FILE}, ${VERSION_INFO_SCRATCH} and ${DIFF_TMP}.
+    exit 1
+fi
+
+rm ${DIFF_TMP}
+
+# ============ PHASE 2: Update metadata and commit ============
+
+# Compute the *next* git commit count to use as the fourth version
+# number.
+
+NEXT_COMMIT_COUNT=$(( 1 + `git rev-list --count HEAD` ))
+
+# Rewrite the metadata file with its new version information.
+# The output goes to a scratch file for validation.
+
+METADATA_SCRATCH=\#new${METADATA_FILE}
+
+cat ${METADATA_FILE} | awk "{ \
+ if (match(\$0, /^package_version:/)) \
+ print \$1 \" \" ${V1} \" \" ${V2} \" \" ${V3} \" \" ${NEXT_COMMIT_COUNT}; \
+ else print }" > ${METADATA_SCRATCH}
+
+# Be careful in case something has gone wrong. This expression will
+# produce 2 if the version has been properly rewritten, 0 if the
+# version remains the same, and some other value if a detectable
+# failure has occurred.
+
+DIFF_TMP=.diff_tmp
+
+CHECK_COUNT=`diff -U 0 ${METADATA_FILE} ${METADATA_SCRATCH} \
+ | grep '^.package_version' | tee ${DIFF_TMP} | wc -l`
+
+if [ $CHECK_COUNT -eq 2 ]; then
+    # We are updating the version in the metadata file and
+    # committing that file with anything else in the git index.
+    cat ${DIFF_TMP}
+    mv ${METADATA_SCRATCH} ${METADATA_FILE}
+    MSG="Version ${V1} ${V2} ${V3} ${NEXT_COMMIT_COUNT}"
+    if [ -z "$*" ]; then
+        MSG="${MSG}."
+    else
+        MSG="${MSG}: $*"
+    fi
+    export APL_PKG_COMMIT=yes
+    echo Commit message: ${MSG}
+    git commit -q -a -m "${MSG}"
+elif [ $CHECK_COUNT -eq 0 ]; then
+    # The commit count is right where the version file says
+    # it should be; there's nothing to commit.
+    rm ${METADATA_SCRATCH}
+    echo No change
+else
+    # We shouldn't see this unless something's borked.
+    echo Something went wrong.
+    echo See ${METADATA_FILE}, ${METADATA_SCRATCH} and ${DIFF_TMP}.
+    cp ${VERSION_INFO_SAVE} ${VERSION_INFO_FILE}
+    exit 1
+fi
+
+# Final cleanup.
+
+rm ${DIFF_TMP}
+rm ${VERSION_INFO_SAVE}

@@ -1,0 +1,61 @@
+The `extra` directory contains files which complement the use of `apl-pkg`.
+
+akt
+
+  This C program maps keyboard sequences ESC-<key> to APL characters and
+  passes all other key sequences unchanged. Provisions are made to pass
+  ESC without a following key and to pass ANSI keycodes beginning with a
+  CSI (ESC-[); these provisions are based upon a timer.
+
+  You must use akt with a terminal emulator which is configured to "Send
+  Meta as Escape". This is the default for most modern terminal emulators.
+
+  The program is designed to pipe its output to another process, such as
+  an APL interpreter or a text editor. When connected via a pipe, the
+  program's default behavior in response to typing Ctrl-C is to send a
+  SIGINT to the process on the receiving end of the pipe. (This facility
+  requires Linux.) The receiving process may either trap the signal or
+  terminate; in the latter case, akt will detect the termination and exit.
+
+  The akt program provides a keyboard layout based upon Dyalog's keyboard.
+  You type APL characters by holding the Alt or Shift+Alt keys.
+
+  Because Alt+` often conflicts with window-manager key bindings, the APL ◊
+  is also available via Alt+D (note: uppercase d; the Shift key must be
+  pressed along with the Alt key).
+
+  The akt 1.3 (and later) layout adds symbols for currency and for GNU APL:
+
+    Alt+Y ¥      Alt+W ⍹
+    Alt+U €      Alt+A ⍶
+    Alt+C ¢      Alt+X χ
+    Alt+B £
+
+  You must have a C compiler installed to build akt. The apl-pkg installer
+  attempts to build akt and creates a link to the program in ~/bin.
+
+  Run $ akt -h for further details.
+
+keyboard1.txt
+
+  This file illustrates the keyboard layout implemented by akt. You may
+  print it for reference.
+
+  This file can be made available to GNU APL's ]KEYB command by adding a
+  line to your ~/.gnu-apl/preferences file:
+
+  KEYBOARD_LAYOUT_FILE /absolute/path/to/keyboard1.txt
+
+awe
+
+  This script runs akt and GNU APL, loading apl-pkg and a system manifest
+  file at startup. The apl-pkg installer creates a link to the awe script
+  in ~/bin, creating the directory if it does not exist.
+
+  Run $ awe -h for further details.
+
+  Note that awe requires akt.
+
+  You may run awe in the console; it will, if needed, install the console
+  APL font. To restore the original font after exiting awe, it may be
+  necessary to type one ^D.

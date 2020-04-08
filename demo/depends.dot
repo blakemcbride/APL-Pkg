@@ -1,0 +1,19 @@
+// Copyright (c) 2014 David B. Lamkins
+// Licensed under the MIT License
+// See the LICENSE file included with this software.
+
+digraph Dependencies {
+  "demo-p1" -> "demo-p2";
+  "demo-p2" -> "demo-p3";
+  "demo-p2" -> "demo-p5";
+  "demo-p3" -> "demo-p4";
+  "demo-p4" -> "demo-p5";
+  "demo-p5" -> "demo-p4";
+  "demo-p6" -> "demo-p8";
+  "no-such-package" [shape=box,style=dotted];
+  "demo-p6" -> "no-such-package" [style=dotted];
+  "demo-p7" -> "demo-p8";
+  "demo-p7" -> "demo-p5";
+  "demo-p9" -> "demo-p8";
+  "demo-p9" -> "demo-p3";
+}

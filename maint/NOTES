@@ -1,0 +1,148 @@
+These are elaborations of tasks on the ROADMAP or miscellaneous tasks
+and bug fixes not listed on the ROADMAP.
+
+For Percy:
+
+- Here are functions that have been partially changed and need to be
+  completed to support versioned loading:
+  - pkg⍙load
+  - pkg⍙get_load_paths
+
+- Work up use-cases and examples for versioning metadata. Illustrate
+  how this can be used to maintain multiple versions of the same
+  package in the repository. Add logic to prevent version conflicts.
+
+- Representing version requirements in metadata:
+  - Append version constraints to the depends_on: <pkg_name> lines.
+  - Version number constraints are encoded as one to four decimal
+    integers separated by a space, just like package version numbers.
+  - A version constraint is a version number prefixed by a match
+    designator character. The match designator is one of `_` (match
+    all versions not less than), `<` (match all versions less than),
+    or `!` (match all versions not equal). There is no `=` designator.
+  - Omitted version numbers are treated according to the match type.
+    For example, _ 0 2 would match 0 2 0 0 or higher; < 4 would
+    match 3 999 9999 9999 and lower; ! 1 8 348 would match any
+    version without the leading components 1 8 348.
+  - The constraint on the version of a dependent package is taken as
+    an implicit disjunction (logical AND) of its individual
+    constraints.
+
+- Handling of multiple package versions:
+  - Organize versions by subdirectory. The top-level package directory
+    contains a _version_.<foo> directory for each version of the
+    package. Note that <foo> need not (but may) denote the package
+    version; the only version number visible to the package manager is
+    that encoded in the package's metadata.
+  - An unversioned package may use either the legacy layout with
+    _metadata_ and _control_.apl files at the top of the package's
+    directory tree, or the new layout with _version_.<foo> directories
+    at the top level. The two approaches may not be mixed for a package.
+  - If a package is versioned, then all versions of that package must
+    have version metadata and each version metadata entry must be
+    unique. An unversioned package must be the sole instance of that
+    package.
+  - Each package in the repository must be properly versioned or
+    unversioned as noted above, otherwise the package manager must
+    refuse to function until the incorrect version metadata is
+    rectified and the package database is manually reloaded.
+  - In the absence of constraints, load the latest version available
+    for a package.
+  - Evaluate constraints incrementally. Solve the set of constraints
+    for all loaded packages as well as a requested (top-level)
+    package and its dependents. If loading a package would cause an
+    already-loaded package to not meet the new version constraint
+    but another version of the package is available that satisfies
+    the constraint, then replace the loaded package with the version
+    that satisfies the constraint.
+  - Constraint evaluation must consider that package version candidates
+    may express different sets of dependencies.
+  - Should we reevaluate constraints when a package has been unloaded?
+  - Need to make duplicate-prefix logic aware of versioned packages.
+    It's OK to have different versions of the same package, but not
+    different packages with the same prefix.
+  - ]pkg packages should show a flag when multiple versions are
+    present for a package.
+  - ]pkg enable and ]pkg disable apply to all versions of a named
+    package.
+  - Add a ]pkg versions <package-name> command to list the versions
+    of a package, along with the filesystem path under which each
+    package is found.
+  - ]pkg read, ]pkg depends, ]pkg metadata, ]pkg load, and ]pkg sh
+    apply to the loaded version of a package or the latest version
+    if the package is not loaded.
+  - ]pkg stats should have a column for the loaded package's version
+    number.
+
+- Constraint satisfaction algorithm
+  - See https://fsprojects.github.io/Paket/resolver.html , for example.
+    - Basically: DFS with some ordering heuristics.
+
+For Booberry:
+
+- Add local search-path infrastructure.
+
+For Lily:
+
+- Update probes, support code and bootstrap for GNU APL on non-Linux
+  platforms.
+
+For Spencer:
+
+- Design metadata format for remote repository.
+
+- Design download protocol for remote repository.
+
+For Boogieman:
+
+- Rework bootstrap to allow for APLs that don't natively support
+  Unicode. This can be done using a platform specific bootstrap loader
+  along with minor rework to the package manager's character
+  translation (to support converting Unicode code-points to platform
+  specific characters.)
+
+Miscellaneous Tasks (no specific release):
+
+- See ./maint/wip; fix these.
+
+- Unit tests.
+
+- Factor all ⎕fio usage into src/platform/gnu/ .
+
+Possible Futures:
+
+- Is it possible to patch the file locations of bootloader functions
+  and of defined constant functions?
+
+- Have stress test create some percentage of packages with missing
+  dependencies.
+
+- Rewrite akt using forkpty().
+  See https://gist.github.com/jrziviani/3547195 .
+
+- Single-file package combining metadata and APL code.
+
+- Package autogen (starting from an APL file).
+
+- Patch-tracking: (1) record package load time in transient metadata;
+  (2) provide a command to compare function fix time against package
+  load time - newer functions are patches; (3) provide a command to
+  write patched functions to a package subdirectory belonging to the
+  package manager; (4) if patched functions are present in the
+  filesystem, load them after the package loads; (5) provide a command
+  to delete patches; (6) save original code along with patch and
+  provide a command to advise when the original has changed; (7)
+  provide commands to enable and disable sets of patches per package;
+  (8) read a configuration file to control loading of patch sets.
+
+  [Note that pkg⍙refresh_fn_refs maintains a list of functions and
+  their last-modified timestamps (updated whenever pkg⍙refresh_fn_refs
+  is called). Patch-tracking can employ similar logic, but the saved
+  timestamps need to be fixed at load-time and never updated.]
+
+- Nabla editor integration: Use fix-time comparison to find functions
+  that have changed since loading from source file. Provide report of
+  touched functions. Capture comments, whitespace, expressions and
+  function line numbers during loading. Re-save file containing
+  touched function(s) by writing comments, whitespace, expressions and
+  current function definitions in original file order.

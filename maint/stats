@@ -1,0 +1,43 @@
+#! /bin/sh
+# Copyright (c) 2014 David B. Lamkins
+# Licensed under the MIT License
+# See the LICENSE file included with this software.
+
+HERE=`( cd $(dirname $0) && pwd )`
+TOP=${HERE}/..
+
+. ${TOP}/script/tp.sh
+. ${TOP}/script/files.sh
+
+REMEMBER_FILE=/tmp/`basename $0`.$$
+
+other_files () {
+    for f in $(grep -v -F -f $REMEMBER_FILE); do
+        [ -n "`file $f | grep text`" ] && echo $f
+    done
+    rm -f $REMEMBER_FILE
+}
+
+format () {
+    awk '{ printf("%6d %s\n", $1, $2) }'
+}
+
+count () {
+    echo `ul $*`
+    tee -a $REMEMBER_FILE | xargs wc -l | format
+    echo
+}
+
+summarize () {
+    echo `ul $*`
+    xargs wc -l | tail -1 | format
+}
+
+files ${TOP} | apl_files | count APL Files
+files ${TOP} | package_files | count Package Files
+files ${TOP} | demo_apl_files | count Demo APL Files
+files ${TOP} | demo_package_files | count Demo Package Files
+files ${TOP} | doc_files | count Documentation Files
+files ${TOP} | script_files | count Script Files
+files ${TOP} | other_files | count Other Files
+files ${TOP} | summarize All Files

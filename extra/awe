@@ -1,0 +1,288 @@
+#! /bin/sh
+
+#: APL Workbench Environment
+
+PGM=`basename $0`
+
+DEFAULT_MANIFEST=system-1
+
+usage () {
+    if [ ${PGM} = "awe" ]; then
+        PDESC=", the APL Workbench Environment,"
+    fi
+    cat <<EOF
+usage: ${PGM} [[-m MANIFEST]|[-M]|[-n]] [-p N|mono] [-x wm|tabbed|dvtm] [-c]
+usage: ${PGM} -h
+EOF
+    if [ "$1" = "help" ]; then
+        cat <<EOF
+  -m MANIFEST   Specify MANIFEST name (default: '${DEFAULT_MANIFEST}').
+  -M            Don't load manifest.
+  -n            APL only; don't load toolkit.
+  -p N          Preference profile number for APL (default:
+                  Profile 1, if present, in the GNU APL
+                  preferences file; otherwise the same
+                  as -p mono).
+  -p mono       No APL preference profile. Disable colors.
+  -i N          Set the processor ID for shared variables.
+  -x wm         Use X window manager to present editor.
+  -x tabbed     Use tabbed (1) to present editor under X.
+  -x dvtm       Use dvtm (1) to present editor under X.
+  -c            Show the command used to invoke APL.
+
+Unless overridden by the -x option, ${PGM} uses the existing window
+multiplexing environment if one of dvtm(1) or tabbed(1); otherwise
+${PGM} uses the window manager.
+
+When run in a Linux console, ${PGM} changes the console font and
+runs APL inside dvtm (1), a virtual terminal manager. Get dvtm (1)
+help by typing ^G?. Leaving APL returns you to dvtm (1); use exit (1)
+or ^D to leave dvtm (1) and restore the console font.
+
+${PGM^^*}${PDESC} integrates:
+  GNU APL                 (Jüergen Sauermann)
+    An implementation of ISO 13751 APL w/ APL2 extensions.
+  APL Package Manager     (David B. Lamkins)
+    An APL code management and analysis toolkit.
+  APL Keyboard Translator (David B. Lamkins)
+    A utility to provide keyboard access to APL characters.
+EOF
+    fi
+    exit 1
+}
+
+# Check character set.
+if echo $LC_ALL|grep -qi '\.utf-\?8\(,.\+\)\?$'; then
+    : # OK
+else
+    echo Locale must specify utf8 charset.
+    exit 1
+fi
+
+# Establish defaults.
+SHOW_COMMAND=false
+LOAD_TOOLKIT=true
+MANIFEST=$DEFAULT_MANIFEST
+MANIFEST_REQUESTED=false
+NO_MANIFEST=false
+XCONTAINER=
+PROFILE=
+SVP_ID=
+
+# Parse the command line options.
+while getopts ":hci:nm:Mp:x:"  OPT; do
+    case $OPT in
+        h)  usage help ;;
+        c)  SHOW_COMMAND=true ;;
+        i)  SVP_ID=$OPTARG ;;
+        n)  LOAD_TOOLKIT=false ;;
+        m)
+            # The manifest is a name, not a path.
+            echo $OPTARG | grep -q / && usage
+            MANIFEST=$OPTARG
+            MANIFEST_REQUESTED=true
+            ;;
+        M)  NO_MANIFEST=true ;;
+        p)  PROFILE=$OPTARG ;;
+        x)  XCONTAINER=$OPTARG ;;
+        *)  usage ;;
+    esac
+done
+shift $(( OPTIND - 1 ))
+
+if [ $# -gt 0 ]; then
+    usage
+fi
+
+# If we're not loading the toolkit, we can't specify a manifest.
+$LOAD_TOOLKIT || [ $MANIFEST = $DEFAULT_MANIFEST ] || usage
+
+# If we're not loading the toolkit, we shouldn't suppress the manifest.
+if $NO_MANIFEST; then $LOAD_TOOLKIT || usage; fi
+
+# Specifying no manifest means we can't also ask for a manifest.
+$NO_MANIFEST && $MANIFEST_REQUESTED && usage
+
+# Don't accept X container override unless running under X.
+[ -z "$DISPLAY" ] && [ -n "$XCONTAINER" ] && usage
+
+have_cmd () {
+    which $1 >/dev/null 2>&1
+}
+
+# Check for presence of GNU APL.
+have_cmd apl && apl --version | grep -q 'GNU APL' || {
+    echo apl not on \$PATH or not GNU APL
+    exit 1
+}
+
+# Confirm that apl.pkg is a symlink.
+LIB0=$(echo|apl -s --LX ')libs'|awk '/^ 0/ { print $3 }')
+[ -L "$LIB0/pkg.apl" ] || {
+    echo "\"$LIB0/pkg.apl\"" not a symlink
+    echo Rerun the apl-pkg installer to correct.
+    exit 1
+}
+
+# Confirm that the XCONTAINER option names an installed program.
+case "$XCONTAINER" in
+    ''|wm) ;;
+    dvtm|tabbed)
+        have_cmd $XCONTAINER || {
+            echo $XCONTAINER is not on \$PATH
+            exit 1
+        }
+        ;;
+    *) usage ;;
+esac
+
+# The next section builds command line options to load the toolkit.
+# If the toolkit is not available, we'll fall back to running GNU
+# APL by itself.
+
+# Locate the apl-pkg directory.
+APL_PKG_REPO=$( [ -f ~/.apl-pkg ] \
+    && awk -F' ' '/^ *packages_directory:/ { print $2 }' < ~/.apl-pkg \
+    || echo $HOME/apl-pkg-repo
+)
+
+# Locate the GNU APL workspaces directory.
+GNU_APL_PREFS_DIRS=" \
+$HOME/.gnu-apl/preferences \
+$HOME/.config/gnu-apl/preferences \
+/etc/gnu-apl.d/preferences \
+/usr/local/etc/gnu-apl.d/preferences \
+"
+
+for f in $GNU_APL_PREFS_DIRS; do
+    if [ -f $f ]; then
+        GNU_APL_PREF_FILE=$f
+        break
+    fi
+done
+
+APL_WS_DIR=$( [ -n "$GNU_APL_PREF_FILE" ] \
+    && awk '/^ *LIBREF-0/ { print $2 }' $GNU_APL_PREF_FILE \
+    || echo `pwd`/workspaces
+)
+
+# If a manifest name was specified on the command line, the manifest
+# must be found in the APL package repository directory.
+if $NO_MANIFEST; then
+    :
+elif $LOAD_TOOLKIT && [ ! -f $APL_PKG_REPO/$MANIFEST ]; then
+    echo $PGM: Manifest \'$MANIFEST\' not found
+    if [ $MANIFEST = $DEFAULT_MANIFEST ]; then
+        echo Either create the default manifest or use the -M flag.
+    fi
+    exit 1
+fi
+
+# If no profile was specified on the command line, default to Profile 1
+# if present in the GNU APL pref file.
+if [ -z "$PROFILE" ] && [ -n "$GNU_APL_PREF_FILE" ]; then
+    if grep -q '^Profile[[:space:]]\+1' $GNU_APL_PREF_FILE; then
+        PROFILE=1
+    fi
+fi
+
+# If 'mono' was specified instead of a profile number, ignore profiles
+# and disable colors.
+if [ "$PROFILE" = "mono" ]; then
+    PROFILE=
+fi
+
+# Build the APL and toolkit options.
+#
+# Note that -p N is properly supported beginning with GNU APL
+# version 1.4 / 8958 .
+if [ -n "$PROFILE" ]; then
+    TOOLKIT_OPTS="$TOOLKIT_OPTS -p"
+    TOOLKIT_OPTS="$TOOLKIT_OPTS $PROFILE"
+else
+    TOOLKIT_OPTS="$TOOLKIT_OPTS --noColor"
+fi
+
+if [ -n "$SVP_ID" ]; then
+    TOOLKIT_OPTS="$TOOLKIT_OPTS --id"
+    TOOLKIT_OPTS="$TOOLKIT_OPTS $SVP_ID"
+fi
+
+if $LOAD_TOOLKIT && [ -f $APL_WS_DIR/pkg.apl ]; then
+    TOOLKIT_OPTS="$TOOLKIT_OPTS --LX"
+    TOOLKIT_OPTS="$TOOLKIT_OPTS ')COPY pkg'"
+    if $NO_MANIFEST; then
+        :
+    else
+        TOOLKIT_OPTS="$TOOLKIT_OPTS --"
+        TOOLKIT_OPTS="$TOOLKIT_OPTS --pkg-manifest"
+        TOOLKIT_OPTS="$TOOLKIT_OPTS $MANIFEST"
+    fi
+fi
+
+# Create the APL command line.
+cmd="akt apl --silent ${TOOLKIT_OPTS}"
+
+# Announce that user will need to leave dvtm after APL session.
+if [ -z "$DISPLAY" ] || [ "$XCONTAINER" = "dvtm" ]; then
+    echo Exit dvtm after leaving APL
+    sleep 3
+fi
+
+# If we're in the console, prepare the APL font and wrap our command in dvtm.
+if [ `consoletype` = 'vt' ]; then
+    # The Unifont-APL8x16 font is not part of the GNU unifont package.
+    # Note that the Unifont-APL8x16 font stands alone; it does not require
+    # the unifont package.
+    UNIFONT_VERSION=7.0.06
+    UNIFONT_FONT_NAME=Unifont-APL8x16-${UNIFONT_VERSION}
+    unicode_start ${UNIFONT_FONT_NAME}
+    trap "unicode_start" EXIT
+fi
+
+get_term_name () {
+    term_name=`awk -F' ' '/^ *terminal:/ { print $2 }' < ~/.apl-pkg`
+    [ -z "${term_name}" ] && term_name=xterm
+    echo ${term_name}
+}
+
+get_embed_flag () {
+    embed_flag=`awk -F' ' '/^ *embed_option:/ { print $2 }' < ~/.apl-pkg`
+     [ -z "${embed_flag}" ] && [ "$1" = "xterm" ] && embed_flag='-into'
+    echo ${embed_flag}
+}
+
+# If we're running under X and have specified a container, set it up.
+if [ -n "$DISPLAY" ] && [ -n "$XCONTAINER" ]; then
+    case "$XCONTAINER" in
+        wm) ;;
+        tabbed)
+              term_name=`get_term_name`
+              embed_flag=`get_embed_flag ${term_name}`
+              if [ -n "${embed_flag}" ]; then
+                  cmd="tabbed -c -r 2 ${term_name} ${embed_flag} '' -e ${cmd}"
+              else
+                  echo Please specify \'embed_option\' in ~/.apl-pkg
+                  exit 1
+              fi
+              ;;
+        dvtm) cmd="dvtm -c /tmp/$PGM.$$ \"${cmd}\"" ;;
+    esac
+fi
+
+# If we're not running under X, we'll need to run awe inside dvtm in order
+# to be able to spawn an editor.
+if [ -z "$DISPLAY" ]; then
+    have_cmd dvtm || {
+        echo dvtm is not on \$PATH
+        exit 1
+    }
+    wcmd="dvtm -c /tmp/$PGM.$$ \"${cmd}\""
+else
+    wcmd="${cmd}"
+fi
+
+# Run the wrapped command.
+$SHOW_COMMAND && echo "${wcmd}"
+
+sh -c "${wcmd}"

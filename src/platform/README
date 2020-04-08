@@ -1,0 +1,16 @@
+The src/platform/ directory contains platform-specific code for the
+package manager. All code in this directory (and its subdirectories)
+is written using UTF-8 encoding; a platform-specific loader from the
+boot directory translates Unicode to the target APL's native character
+set during loading.
+
+The boot loader loads only the src/LOADER.apl file, which in turn uses
+the pkg⍙BOOT_LOAD function to load additional files from the src-*/
+directories.
+
+The src/platform/ directory contains a subdirectory for each supported
+APL platform. The LOADER.apl file loads platform-specific files from
+the appropriate src/platform/ subdirectory based upon a load-time
+determination of the platform identity. See the package manager's API
+documentation for functions to be used for load-time platform detection
+and selection of alternative execution paths.

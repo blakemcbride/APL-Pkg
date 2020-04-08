@@ -1,0 +1,14 @@
+# This is not an APL file. This is metadata for an APL package.
+
+package_name: demo-p3
+package_prefix: d3
+package_version: 
+depends_on: demo-p4
+date: 
+keyword: 
+author: 
+email: 
+organization: 
+license: 
+description: 
+home_repository: 

@@ -1,0 +1,14 @@
+# This is not an APL file. This is metadata for an APL package.
+
+package_name: vtest-p5
+package_prefix: vd5
+package_version: 1
+depends_on: vtest-p4 1
+date: 
+keyword: 
+author: 
+email: 
+organization: 
+license: 
+description: 
+home_repository: 

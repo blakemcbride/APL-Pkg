@@ -1,0 +1,6 @@
+#! /bin/bash
+
+if [ "$APL_PKG_COMMIT" != "yes" ]; then
+    echo Please use maint/commit .
+    exit 1
+fi

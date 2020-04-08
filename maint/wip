@@ -1,0 +1,35 @@
+#! /bin/bash
+# Copyright (c) 2014 David B. Lamkins
+# Licensed under the MIT License
+# See the LICENSE file included with this software.
+
+# Excerpt APL source code containing work-in-progress tags.
+
+HERE=`( cd $(dirname $0) && pwd )`
+
+(
+    cd $HERE/..
+    find . -name '*.apl' | xargs grep --color=never -FwHn -A 10 -f <( cat <<EOF
+FIX
+TODO
+FINISH
+REMOVE
+EOF
+    ) | awk -f <( cat <<EOF
+BEGIN { mc=0 }
+/^--/ { print \$0 }
+/^[^:]+:[0-9]+:/ { mc=mc+1; more=1; print \$0 }
+/-[0-9]+- +⍝/ { if (more) print \$0 }
+/-[0-9]+- +[^⍝]/ { more=0 }
+END { printf("\n %d match%s of work-in-progress tags\n",
+             mc, mc != 1 ? "es" : "") }
+EOF
+    ) | grep --color=always -f <( cat <<EOF
+FIX
+TODO
+FINISH
+REMOVE
+^
+EOF
+    )
+)

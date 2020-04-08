@@ -1,0 +1,63 @@
+#! /bin/sh
+# Copyright (c) 2014 David B. Lamkins
+# Licensed under the MIT License
+# See the LICENSE file included with this software.
+
+# Run this script to check whether the tools referenced by the APL
+# Package Manager are accessible.
+
+confirm () {
+    [ $? -eq 0 ] && echo '' present || echo '' needed
+}
+
+font_check () {
+    found=false
+    fc-list :scalable=true:spacing=mono: family | grep -q "$1"
+    [ $? -eq 0 ] && found=true
+    printf "$1"
+    confirm
+}
+
+tool_check () {
+    printf "${2:-$1}"
+    which $1 >/dev/null 2>&1
+    confirm
+}
+
+someof_check () {
+    found=false
+    for c in ${@}; do
+        which $c >/dev/null 2>&1
+        [ $? -eq 0 ] && found=true
+    done
+    $found && echo Some of { ${@} } present || echo All of { ${@} } missing
+}
+
+config_check () {
+    tool=$(grep "^$1:" ~/.apl-pkg|cut -d: -f2)
+    [ -n "$tool" ] && tool_check $tool
+    [ -z "$tool" ] && echo $1 not specified
+}
+
+printf "Checking font\n--\n"
+font_check 'DejaVu Sans Mono'
+font_check FreeMono
+
+printf "\nChecking default tools\n--\n"
+tool_check xterm
+tool_check sh
+tool_check vi
+tool_check akt
+tool_check abduco
+tool_check dvtm
+tool_check tabbed
+
+printf "\nChecking configured tools\n--\n"
+config_check terminal
+config_check shell
+config_check editor
+
+printf "\nChecking alternate tools\n--\n"
+someof_check vim vis nano
+someof_check urxvt st
+someof_check bash dash fish ksh yash zsh

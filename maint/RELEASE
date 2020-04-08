@@ -1,0 +1,34 @@
+Instructions for doing a named release
+======================================
+
+Assumptions:
+
+ - Current release is on master branch.
+ - New release is on <release-name> branch.
+ - Bug fixes have been merged from master as appropriate.
+ - The name of the release following this one is already known.
+
+ 1. $ git checkout <release-name> # lowercase
+ 2. Update doc/ANNOUNCE.md .
+ 3. Update src/api.apl:pkg∆manager with release name (capitalized).
+ 4. Update doc/ROADMAP.md with release date.
+ 5. Update doc/TUTORIAL with release name (capitalized).
+ 6. Update template/_metadata_ with release name (capitalized).
+ 7. Update template/_control_.apl with release name (capitalized).
+ 8. Update _metadata_ with release name (capitalized) and date.
+ 9. $ ./maint/commit -min "<release-name> release."
+10. $ git checkout master
+11. $ git merge <release-name> # lowercase
+12. $ git tag <release-name> # capitalized
+13. $ git push --tags
+14. $ git branch <next-release> # lowercase
+15. $ git checkout <next-release>
+16. Update src/api.apl:pkg∆manager with release name (capitalized
+    w/ -devel, e.g. Percy-devel).
+17. $ git push --set-upstream origin <next-release>
+18. Login to GitHub and create a new release:
+      a. Select the <release-name> tag.
+         (This should show as an existing tag.)
+      b. Title the release "APL Package Manager <maj>.<min> (<Name>)
+      c. Paste the contents of ANNOUNCE.md as the description.
+      d. Be sure to save edits.

@@ -1,0 +1,46 @@
+#! /bin/sh
+# Copyright (c) 2014 David B. Lamkins
+# Licensed under the MIT License
+# See the LICENSE file included with this software.
+
+HERE=`( cd $(dirname $0) && pwd )`
+TOP=$HERE/..
+
+. $TOP/script/files.sh
+
+MAX_LINE=80
+
+YES=1
+NO=0
+
+ALL_OK=$YES
+
+CR="`printf \\\\r`"
+TAB="`printf \\\\t`"
+
+LIST_TEXT=$( files $TOP | run_filter "$filter_text" )
+( cd $TOP && wc -L $LIST_TEXT | head -n -1 | \
+    awk "{ if (\$1 > $MAX_LINE) print }" )
+LONGEST=$( cd $TOP && wc -L $LIST_TEXT | tail -1 | awk '{ print $1 }' )
+if [ $LONGEST -gt $MAX_LINE ]; then
+    echo Some files have lines longer than $MAX_LINE columns
+    ALL_OK=$NO
+fi
+
+LIST_NO_MF=$( files $TOP | run_filter "$filter_no_makefile" )
+if ( cd $TOP && grep -U -l -e $CR -e $TAB $LIST_NO_MF ); then
+    echo Some files have return or tab characters
+    ALL_OK=$NO
+fi
+
+LIST_MF=$( files $TOP | run_filter "$filter_makefile" )
+if ( cd $TOP && grep -U -l -e $CR $LIST_MF ); then
+    echo Some makefiles have return characters
+    ALL_OK=$NO
+fi
+
+if [ $ALL_OK -eq $YES ]; then
+    echo All checks passed
+else
+    exit 1
+fi
