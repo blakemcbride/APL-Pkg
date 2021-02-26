@@ -366,11 +366,11 @@ EOF
 # the unifont package.
 UNIFONT_VERSION=7.0.06
 UNIFONT_SERVER=http://unifoundry.com/
-UNIFONT_SERVER_DIR=pub/unifont-${UNIFONT_VERSION}/font-builds
+UNIFONT_SERVER_DIR=pub/unifont/unifont-${UNIFONT_VERSION}/font-builds
 UNIFONT_FONT_NAME=Unifont-APL8x16-${UNIFONT_VERSION}
 UNIFONT_PSF_FILE=${UNIFONT_FONT_NAME}.psf
 UNIFONT_GZ_FILE=${UNIFONT_PSF_FILE}.gz
-CFD=/usr/lib/kbd/consolefonts
+CFD=$(dirname $(find /usr/lib/kbd /usr/share -type d -name consolefonts 2>/dev/null))
 if [ ! -f ${CFD}/${UNIFONT_GZ_FILE} ] ; then
     cat <<EOF
 We're about to download and install a console font with APL glyphs.
